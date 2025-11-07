@@ -1,10 +1,13 @@
+from contextvars import ContextVar
+
 import uvicorn
 
 from infrastructure.pg.pg import PG
 from infrastructure.weedfs.weedfs import AsyncWeed
 from infrastructure.telemetry.telemetry import Telemetry, AlertManager
+from pkg.client.external.claude.client import AnthropicClient
 
-from pkg.client.external.openai.client import GPTClient
+from pkg.client.external.openai.client import OpenAIClient
 from pkg.client.external.email.client import EmailClient
 from pkg.client.external.telegram.client import LTelegramClient
 
@@ -52,10 +55,22 @@ tel = Telemetry(
     alert_manager
 )
 
+log_context: ContextVar[dict] = ContextVar('log_context', default={})
+
 # Инициализация клиентов
 db = PG(tel, cfg.db_user, cfg.db_pass, cfg.db_host, cfg.db_port, cfg.db_name)
 storage = AsyncWeed(cfg.weed_master_host, cfg.weed_master_port)
-llm_client = GPTClient(tel, cfg.openai_api_key)
+openai_client = OpenAIClient(
+    tel=tel,
+    api_key=cfg.openai_api_key,
+    neuroapi_api_key=cfg.neuroapi_openai_api_key,
+    proxy=cfg.proxy
+)
+anthropic_client = AnthropicClient(
+    tel,
+    cfg.anthropic_api_key,
+    proxy=cfg.proxy
+)
 
 email_client = EmailClient(
     tel=tel,
@@ -80,9 +95,9 @@ vacancy_service = VacancyService(
     interview_repo,
     storage,
     vacancy_prompt_generator,
-    llm_client,
+    anthropic_client,
     email_client,
-    telegram_client
+    telegram_client,
 )
 
 interview_service = InterviewService(
@@ -90,8 +105,9 @@ interview_service = InterviewService(
     vacancy_repo,
     interview_repo,
     interview_prompt_generator,
-    llm_client,
-    storage
+    openai_client,
+    anthropic_client,
+    storage,
 )
 
 # Инициализация контроллеров
@@ -100,7 +116,7 @@ interview_controller = InterviewController(tel, interview_service)
 telegram_controller = TelegramHTTPController(tel, telegram_client)
 
 # Инициализация middleware
-http_middleware = HttpMiddleware(tel, cfg.prefix)
+http_middleware = HttpMiddleware(tel, cfg.prefix, log_context)
 
 if __name__ == "__main__":
     app = NewHTTP(

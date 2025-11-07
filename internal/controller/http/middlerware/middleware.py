@@ -7,14 +7,14 @@ from opentelemetry import propagate
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
-from internal import interface, common, model
+from internal import interface, common
 
 
 class HttpMiddleware(interface.IHttpMiddleware):
     def __init__(
             self,
             tel: interface.ITelemetry,
-            recruitai_authorization_client: interface.IRecruitAIAuthorizationClient,
+            # recruitai_authorization_client: interface.IRecruitAIAuthorizationClient,
             prefix: str,
             log_context: ContextVar[dict],
     ):
@@ -22,7 +22,7 @@ class HttpMiddleware(interface.IHttpMiddleware):
         self.meter = tel.meter()
         self.logger = tel.logger()
         self.prefix = prefix
-        self.recruitai_authorization_client = recruitai_authorization_client
+        # self.recruitai_authorization_client = recruitai_authorization_client
         self.log_context = log_context
 
     def trace_middleware01(self, app: FastAPI):
@@ -92,41 +92,42 @@ class HttpMiddleware(interface.IHttpMiddleware):
         return _logger_middleware02
 
     def authorization_middleware03(self, app: FastAPI):
-        @app.middleware("http")
-        async def _authorization_middleware03(
-                request: Request,
-                call_next: Callable
-        ):
-            with self.tracer.start_as_current_span(
-                    "HttpMiddleware.authorization_middleware",
-                    kind=SpanKind.INTERNAL,
-            ) as span:
-                try:
-                    access_token = request.cookies.get("Access-Token")
-                    if not access_token:
-                        authorization_data = model.AuthorizationData(
-                            account_id=0,
-                            two_fa_status=False,
-                            role="guest",
-                            message="guest",
-                            status_code=200
-                        )
-                    else:
-                        authorization_data = await self.recruitai_authorization_client.check_authorization(access_token)
-
-                    request.state.authorization_data = authorization_data
-
-                    if authorization_data.status_code == 403:
-                        self.logger.warning(authorization_data.message)
-                        return JSONResponse(status_code=403, content={"error": authorization_data.message})
-
-                    response = await call_next(request)
-
-                    span.set_status(StatusCode.OK)
-                    return response
-                except Exception as e:
-
-                    span.set_status(StatusCode.ERROR, str(e))
-                    raise e
-
-        return _authorization_middleware03
+        pass
+        # @app.middleware("http")
+        # async def _authorization_middleware03(
+        #         request: Request,
+        #         call_next: Callable
+        # ):
+        #     with self.tracer.start_as_current_span(
+        #             "HttpMiddleware.authorization_middleware",
+        #             kind=SpanKind.INTERNAL,
+        #     ) as span:
+        #         try:
+        #             access_token = request.cookies.get("Access-Token")
+        #             if not access_token:
+        #                 authorization_data = model.AuthorizationData(
+        #                     account_id=0,
+        #                     two_fa_status=False,
+        #                     role="guest",
+        #                     message="guest",
+        #                     status_code=200
+        #                 )
+        #             else:
+        #                 authorization_data = await self.recruitai_authorization_client.check_authorization(access_token)
+        #
+        #             request.state.authorization_data = authorization_data
+        #
+        #             if authorization_data.status_code == 403:
+        #                 self.logger.warning(authorization_data.message)
+        #                 return JSONResponse(status_code=403, content={"error": authorization_data.message})
+        #
+        #             response = await call_next(request)
+        #
+        #             span.set_status(StatusCode.OK)
+        #             return response
+        #         except Exception as e:
+        #
+        #             span.set_status(StatusCode.ERROR, str(e))
+        #             raise e
+        #
+        # return _authorization_middleware03

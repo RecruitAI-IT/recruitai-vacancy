@@ -42,7 +42,10 @@ class Config:
         self.grafana_url = os.getenv("RECRUITAI_GRAFANA_URL", "http://localhost:3001")
 
         # OpenAI configuration
-        self.openai_api_key = os.getenv("RECRUITAI_OPENAI_API_KEY", "")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
+        self.neuroapi_openai_api_key = os.getenv("NEUROAPI_OPENAI_API_KEY", "")
+        self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        self.proxy: str = os.environ.get("PROXY")
 
         # SMTP Email configuration
         self.smtp_host = os.getenv("RECRUITAI_SMTP_HOST", "smtp.gmail.com")

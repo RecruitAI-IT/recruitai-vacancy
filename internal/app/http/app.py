@@ -1,11 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Path, Form, File, UploadFile
-from typing import List
+from fastapi import FastAPI
 
 from starlette.responses import StreamingResponse
 
-from internal import model, interface
+from internal import interface
 from internal.controller.http.handler.interview.model import *
 from internal.controller.http.handler.vacancy.model import *
 
